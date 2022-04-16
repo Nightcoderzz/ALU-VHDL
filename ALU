@@ -24,17 +24,18 @@ END ALU;
 ARCHITECTURE rtl OF ALU IS -- register transfer level
 
 --signal declaration.
-signal a_in :      std_logic_vector(7 downto 0);                  --accumulator unsigned signal
-signal d_in :      std_logic_vector(7 downto 0);                  -- data_reg unsigned signal
-signal arith_out: std_logic_vector(7 downto 0);				     -- Arith. unit resultsignal 
-signal logic_out: std_logic_vector(7 downto 0);	                 -- Logic  unit result
+signal a_in :     STD_LOGIC_VECTOR(7 downto 0);                  --accumulator unsigned signal
+signal d_in :     STD_LOGIC_VECTOR(7 downto 0);                  -- data_reg unsigned signal
+signal arith_out: STD_LOGIC_VECTOR(7 downto 0);				     -- Arith. unit resultsignal 
+signal logic_out: STD_LOGIC_VECTOR(7 downto 0);	                 -- Logic  unit result
+--signal multi:     std_logic_vector (15 downto 0);               -- multiplication variable
 signal reset:     std_logic_vector(7 downto 0):="00000000";      -- reset signal declaration with set value
 signal set:       std_logic_vector(7 downto 0):="11111111"; 
 signal y:         std_logic_vector(7 downto 0);	                 -- Global result
 
-signal acc_0:    STD_LOGIC;             -- Acc=0
-signal overflow: STD_LOGIC;             -- Acc overflow
-signal A_D:      STD_LOGIC;              -- Acc=Data-Reg
+--signal acc_0:    STD_LOGIC;             -- Acc=0
+--signal overflow: STD_LOGIC;             -- Acc overflow
+--signal A_D:      STD_LOGIC;              -- Acc=Data-Reg
 begin
 
 a_in <= Acc_in;      --ACC in signal
@@ -42,8 +43,6 @@ d_in <= Data_Reg_in; -- Data_reg signal
 --acc_0<= ZFL;         --acc=0 signal
 --overflow<= OVR;      --overflow signal
 --A_D<= AED;           -- ACC=Data_Reg signal
-Q <= logic_out;      -- calculation results are transfered to accumulator output
-Q <= arith_out;
 
  
 WITH Opcode_in(3 DOWNTO 0) SELECT
@@ -53,15 +52,15 @@ WITH Opcode_in(3 DOWNTO 0) SELECT
              a_in +'1' WHEN "0001",
              a_in + d_in WHEN "0010",
              a_in - d_in WHEN "0011",
-             a_in * d_in WHEN "0100",
+             --a_in(3 downto 0) * d_in (3 downto 0) WHEN "0100",
              reset  WHEN OTHERS;
              
 WITH Opcode_in (3 DOWNTO 0) SELECT
 logic_out <=  
              a_in nand d_in WHEN "0111",
              a_in xor d_in WHEN "1000",
-            std_logic_vector(shift_left(unsigned(a_in), to_integer(unsigned(d_in)))) WHEN "0101",
-            std_logic_vector(shift_right(unsigned(a_in), to_integer(unsigned(d_in)))) WHEN "0110",
+            --std_logic_vector(shift_left(unsigned(a_in), to_integer(unsigned(d_in)))) WHEN "0101",
+            --std_logic_vector(shift_right(unsigned(a_in), to_integer(unsigned(d_in)))) WHEN "0110",
              reset WHEN OTHERS;
             
  WITH Opcode_in(3 DOWNTO 0) SELECT
