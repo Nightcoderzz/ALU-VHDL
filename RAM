@@ -1,0 +1,135 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+use std.textio.all;
+
+--use IEEE.std_logic_signed.all; using signed library causes problem
+USE ieee.std_logic_unsigned.all; -- allows numerical operations (+, -)
+
+
+ENTITY RAM IS
+GENERIC (
+address_bits: integer:=2;
+RAM_data_width: integer:=8);
+
+ PORT (
+-- Inputs declaration
+ ALU_out:            IN STD_LOGIC_VECTOR (7 DOWNTO 0);          -- output from the ALU/accumulator
+ External_data_in:   IN STD_LOGIC_VECTOR (7 DOWNTO 0);          -- input to data register
+ Data_address:       IN STD_LOGIC_VECTOR (3 downto 0);          --memory location bus from instruction register (0-1)
+ Load_data_memory:   IN STD_LOGIC;                              -- selector input between external data and ALU output
+ we_DM:              IN std_logic; -- when 0 then reading, when 1 the writing
+ load_DM:            IN std_logic;
+ 
+ --Outputs 
+ Data_ram_out :      OUT std_logic_vector(RAM_data_width - 1 downto 0)     --Output to Acc_in and Data_Reg_in (ALU). Read from memory.
+ );                             
+END RAM;
+
+ARCHITECTURE rtl OF RAM IS -- register transfer level
+
+TYPE RAM_Type IS ARRAY ((2** address_bits) - 1 downto 0) of
+std_logic_vector ( RAM_data_width -1 downto 0)
+
+
+impure function init_ram_hex return ram_type is
+  file text_file : text open read_mode is "ram_content_hex.txt";
+  variable text_line : line;
+  variable ram_content : ram_type;
+begin
+  for i in 0 to ram_depth - 1 loop
+    readline(text_file, text_line);
+    hread(text_line, ram_content(i));
+  end loop;
+ 
+  return ram_content;
+end function;
+
+--signal declaration.
+signal Data_ram_in:    std_logic_vector (7 downto 0);          --Memory write. Data in from mux (ALU and External Data In)
+
+
+begin
+
+--a_in <= Acc_in;      --ACC in signal
+--d_in <= Data_Reg_in; -- Data_reg a_in
+--Q<=y;
+--Ext_Data_Out<=y;
+
+ 
+WITH Opcode_in(3 DOWNTO 0) SELECT
+ arith_out <= 
+             reset WHEN "0000",
+             set   WHEN "1001",
+             a_in +'1' WHEN "0001",
+             a_in + d_in WHEN "0010",
+             a_in - d_in WHEN "0011",
+             reset  WHEN OTHERS;
+
+WITH Opcode_in (3 DOWNTO 0) SELECT
+multi <=     a_in * d_in  WHEN "0100",
+             reset  WHEN OTHERS;  
+             
+WITH Opcode_in (3 DOWNTO 0) SELECT
+logic_out <=  
+             a_in nand d_in WHEN "0111",
+             a_in xor d_in WHEN "1000",
+            std_logic_vector(shift_left(unsigned(a_in), to_integer(unsigned(Opcode_in)))) WHEN "0101",
+            std_logic_vector(shift_right(unsigned(a_in), to_integer(unsigned(Opcode_in)))) WHEN "0110",
+             reset WHEN OTHERS;
+            
+ WITH Opcode_in(3 DOWNTO 0) SELECT
+ y <= 
+      arith_out WHEN "0000" | "1001" | "0001" | "0010" | "0011",
+      logic_out WHEN "0111"| "1000"| "0101"| "0110",
+      multi WHEN "0100",
+      set WHEN OTHERS; -- reset when other states
+      
+-- OVR process
+PROCESS(Opcode_in)
+ BEGIN
+ CASE Opcode_in IS
+ 
+    WHEN "0010" =>-- Addition Overflow a_in + a_in
+        IF ((a_in(7) = '1') and (d_in(7) = '1') and (arith_out(7) = '0')) THEN 
+            OVR <= '1';
+       ELSIF ((a_in(7) = '0') and (d_in(7) = '0') and (arith_out(7) = '1')) THEN 
+           OVR <= '1';
+        ELSE
+            OVR <= '0';
+        END IF;
+        
+    WHEN "0011" => -- Subtraction overflow
+        IF   ((a_in(7) = '0') and (d_in(7) ='1') and (arith_out(7) = '1')) THEN 
+            OVR <= '1';
+        ELSIF ((a_in(7) = '1') and (d_in(7) = '0') and (arith_out(7) = '0')) THEN 
+            OVR <= '1';
+        ELSE
+            OVR <= '0';
+        END IF;   
+        WHEN OTHERS => OVR <= '0';
+        
+    END CASE;
+END PROCESS;
+    
+-- ZFL flag process 
+PROCESS (Acc_in)
+ BEGIN 
+        If Acc_in = "00000000" THEN 
+        ZFL<='1';
+   ELSE 
+        ZFL<='0';
+   END IF;
+END PROCESS;
+
+--Acc=Data_Reg flag process
+PROCESS (Acc_in, Data_Reg_in)
+ BEGIN 
+        If Acc_in = Data_Reg_in THEN 
+        AED<='1';
+   ELSE 
+        AED<='0';
+   END IF;
+END PROCESS;
+ 
+ end architecture rtl;  
