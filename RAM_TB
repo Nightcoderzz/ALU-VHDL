@@ -1,0 +1,92 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.std_logic_unsigned.ALL;
+-- VHDL testbench code for the single-port RAM
+
+ENTITY RAM_TB IS
+END RAM_TB;
+ 
+ARCHITECTURE behavior OF RAM_TB IS 
+ 
+    -- Component Declaration for the single-port RAM in VHDL
+ 
+COMPONENT RAM
+    PORT(
+  -- Inputs
+ Data_addr:   in std_logic_vector(3 downto 0); -- Address to write/read RAM
+ We_DM:       in std_logic; -- Write enable 
+-- RAM_CLOCK:    in std_logic; -- clock input for RAM
+ Load_DM:      in std_logic:='0';
+ ALU_out:      in std_logic_vector (7 downto 0);
+ EXT_Data_in:   in std_logic_vector (7 downto 0);
+ Ram_data_in: inout std_logic_vector (7 downto 0);
+ 
+ -- Output 
+ Ram_data_out: out std_logic_vector(7 downto 0) -- Data output of RAM
+ 
+);
+    END COMPONENT;
+    
+
+   --Inputs
+   signal Data_addr   : std_logic_vector(3 downto 0) := (others => '0');
+   signal RAM_DATA_IN : std_logic_vector(7 downto 0) := (others => '0');
+   signal We_DM       : std_logic := '0';
+   signal Load_DM:      std_logic:='0';
+   --signal RAM_CLOCK   : std_logic := '0';
+   signal EXT_Data_in : std_logic_vector (7 downto 0);
+   signal ALU_out:      std_logic_vector (7 downto 0);
+  --Outputs
+   signal Ram_data_out : std_logic_vector(7 downto 0);
+
+   -- Clock period definitions
+   --constant RAM_CLOCK_period : time := 10 ns;
+ 
+BEGIN
+ 
+ -- Instantiate the single-port RAM in VHDL
+   uut: RAM PORT MAP (
+           Data_addr => Data_addr,
+           RAM_DATA_IN => RAM_DATA_IN,
+           ALU_out=> ALU_out,
+           EXT_Data_in=> EXT_Data_in,
+           We_DM => We_DM,
+           --RAM_CLOCK => RAM_CLOCK,
+           RAM_DATA_OUT => RAM_DATA_OUT,
+           Load_DM=>Load_DM 
+        );
+
+ 
+
+   stim_proc: process
+   begin  
+  We_DM <= '1'; 
+  Load_DM<='1';
+  Data_addr <= "0000";
+  ALU_out <= x"FF";
+  EXT_Data_in<="00001110";
+  
+      wait for 100 ns; 
+  -- start reading data from RAM 
+
+  Data_addr <= Data_addr + "0001";
+      wait for 100ns;
+ 
+  Data_addr <= "0000";
+  We_DM <= '0';
+   Load_DM<='0';
+  -- start writing to RAM
+  wait for 100 ns; 
+  
+  Data_addr <= "0001";
+  
+  ALU_out <= "00001111";
+  EXT_Data_in <= "01010101";
+      wait for 100ns;
+ 
+  We_DM <= '1';
+   Load_DM<='1'; 
+      wait;
+   end process;
+
+END;
